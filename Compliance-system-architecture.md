@@ -1,4 +1,4 @@
-# Cassandra Control Builder & OpenAPI Architecture
+# Cassandra Complianc System Architecture
 
 ## The Core Idea
 
