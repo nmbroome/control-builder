@@ -1,0 +1,2599 @@
+{
+  "meta": {
+    "spec_title": "Cassandra Banking Core",
+    "spec_version": "0.2.0",
+    "spec_hash": "4a50d51022c8829c",
+    "extracted_at": "2026-02-13T22:28:27.831Z",
+    "parser_version": "0.2.0",
+    "vocabulary_model": "entity-scoped"
+  },
+  "stats": {
+    "total_entities": 11,
+    "total_fields": 103,
+    "total_events": 17,
+    "total_endpoints": 1,
+    "total_controls": 12,
+    "pii_fields": 16,
+    "fair_lending_risk_fields": 6,
+    "encrypted_fields": 2,
+    "computed_fields": 1,
+    "read_only_fields": 22,
+    "fields_with_controls": 25
+  },
+  "entities": {
+    "person": {
+      "schema_name": "Person",
+      "domain_name": "person",
+      "description": "An individual member/entity. The canonical representation used ",
+      "field_count": 48,
+      "requires_one_of": [
+        "phone",
+        "email"
+      ]
+    },
+    "kyc_result": {
+      "schema_name": "KycResult",
+      "domain_name": "kyc_result",
+      "description": "Result of async KYC verification. Carried by member.kyc_completed",
+      "field_count": 4
+    },
+    "change_context": {
+      "schema_name": "ChangeContext",
+      "domain_name": "change_context",
+      "description": "Carried by member.updated to indicate what changed.",
+      "field_count": 3
+    },
+    "account": {
+      "schema_name": "Account",
+      "domain_name": "account",
+      "description": "A ledger account. Stub for seed spec.",
+      "field_count": 5
+    },
+    "transaction": {
+      "schema_name": "Transaction",
+      "domain_name": "transaction",
+      "description": "A ledger entry. Stub for seed spec.",
+      "field_count": 7
+    },
+    "ach_transfer": {
+      "schema_name": "AchTransfer",
+      "domain_name": "ach_transfer",
+      "description": "An ACH transfer. Stub for seed spec.",
+      "field_count": 6
+    },
+    "screening_result": {
+      "schema_name": "ScreeningResult",
+      "domain_name": "screening_result",
+      "description": "Result of OFAC/sanctions/adverse media screening.",
+      "field_count": 6
+    },
+    "cash_activity": {
+      "schema_name": "CashActivity",
+      "domain_name": "cash_activity",
+      "description": "Aggregated cash transaction data for a calendar day.",
+      "field_count": 4
+    },
+    "sar_case": {
+      "schema_name": "SarCase",
+      "domain_name": "sar_case",
+      "description": "Carried by sar.decision_required event.",
+      "field_count": 5
+    },
+    "control_result": {
+      "schema_name": "ControlResult",
+      "domain_name": "control_result",
+      "description": null,
+      "field_count": 6
+    },
+    "campaign": {
+      "schema_name": "Campaign",
+      "domain_name": "campaign",
+      "description": "Marketing campaign submitted for compliance review.",
+      "field_count": 9
+    }
+  },
+  "fields": [
+    {
+      "path": "person.entity_id",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "description": "Unique entity identifier (e.g., ent_7xk9m2v4)",
+      "category": "person"
+    },
+    {
+      "path": "person.type",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "person"
+      ],
+      "readOnly": true,
+      "category": "person"
+    },
+    {
+      "path": "person.status",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "pending",
+        "active",
+        "disabled",
+        "archived"
+      ],
+      "readOnly": true,
+      "description": "Always 'pending' on creation.",
+      "state_machine": {
+        "transitions": {
+          "pending": [
+            "active",
+            "disabled"
+          ],
+          "active": [
+            "disabled"
+          ],
+          "disabled": [
+            "active",
+            "archived"
+          ],
+          "archived": []
+        },
+        "events": {
+          "pending->active": "member.kyc_completed",
+          "pending->disabled": "member.kyc_failed",
+          "active->disabled": "member.disabled",
+          "disabled->active": "member.reinstated"
+        }
+      },
+      "category": "person"
+    },
+    {
+      "path": "person.name_first",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "pii": true,
+      "retention": "permanent",
+      "controls": [
+        "BA-03",
+        "CD-04",
+        "BA-05",
+        "BA-20",
+        "CD-06"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.name_last",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "pii": true,
+      "retention": "permanent",
+      "controls": [
+        "BA-03",
+        "CD-04",
+        "BA-05",
+        "BA-20",
+        "CD-06"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.name_middle",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "maxLength": 100,
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.name_suffix",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "Jr",
+        "Sr",
+        "II",
+        "III",
+        "IV",
+        "V"
+      ],
+      "maxLength": 20,
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.date_of_birth",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "format": "date",
+      "description": "ISO 8601 (YYYY-MM-DD). Must be at least 18 years ago.",
+      "pii": true,
+      "fair_lending_risk": true,
+      "retention": "permanent",
+      "controls": [
+        "BA-03",
+        "CD-04",
+        "BA-05",
+        "BA-20"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.tax_id",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "pattern": "^\\d{9}$",
+      "writeOnly": true,
+      "description": "SSN or ITIN, 9 digits, no dashes.",
+      "pii": true,
+      "pii_classification": "restricted",
+      "retention": "permanent",
+      "encryption": "field-level",
+      "controls": [
+        "BA-03",
+        "CD-04"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.tax_id_last_four",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "description": "Last 4 digits of tax ID (returned in responses)",
+      "category": "person"
+    },
+    {
+      "path": "person.address",
+      "entity": "person",
+      "type": "object",
+      "required": true,
+      "controls": [
+        "BA-03",
+        "CD-04"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.address.line1",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200,
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.address.line2",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "maxLength": 200,
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.address.city",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 100,
+      "pii": true,
+      "fair_lending_risk": true,
+      "category": "person"
+    },
+    {
+      "path": "person.address.state",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "pii": true,
+      "fair_lending_risk": true,
+      "category": "person"
+    },
+    {
+      "path": "person.address.postal_code",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 20,
+      "pii": true,
+      "fair_lending_risk": true,
+      "controls": [
+        "BA-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.address.country",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "pattern": "^[A-Z]{2}$",
+      "default": "US",
+      "controls": [
+        "BA-05",
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.phone",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "pattern": "^\\+[1-9]\\d{1,14}$",
+      "description": "E.164 format",
+      "pii": true,
+      "retention": "permanent",
+      "requires_one_of": [
+        "phone",
+        "email"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.email",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "format": "email",
+      "pii": true,
+      "retention": "permanent",
+      "requires_one_of": [
+        "phone",
+        "email"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.purpose_of_account",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "enum": [
+        "personal_checking",
+        "personal_savings",
+        "business_operating",
+        "payroll",
+        "investment",
+        "other"
+      ],
+      "controls": [
+        "BA-04",
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.source_of_funds",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "enum": [
+        "employment_income",
+        "self_employment",
+        "investments",
+        "retirement",
+        "inheritance",
+        "gift",
+        "government_benefits",
+        "other"
+      ],
+      "controls": [
+        "BA-04",
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.expected_activity",
+      "entity": "person",
+      "type": "object",
+      "required": true,
+      "controls": [
+        "BA-04",
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.expected_activity.monthly_volume",
+      "entity": "person",
+      "type": "number",
+      "required": true,
+      "minimum": 0,
+      "description": "Expected monthly transaction volume in USD",
+      "controls": [
+        "CD-03",
+        "BA-04"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.expected_activity.monthly_count",
+      "entity": "person",
+      "type": "integer",
+      "required": true,
+      "minimum": 0,
+      "description": "Expected monthly transaction count",
+      "controls": [
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.expected_activity.primary_transaction_types",
+      "entity": "person",
+      "type": "array",
+      "required": false,
+      "category": "person"
+    },
+    {
+      "path": "person.expected_activity.international_activity",
+      "entity": "person",
+      "type": "boolean",
+      "required": false,
+      "default": false,
+      "description": "Cross-border expected → elevated BSA monitoring",
+      "controls": [
+        "BA-04",
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.occupation",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "maxLength": 200,
+      "controls": [
+        "CD-03",
+        "BA-20"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.employer_name",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "maxLength": 200,
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.country_of_citizenship",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "pattern": "^[A-Z]{2}$",
+      "default": "US",
+      "fair_lending_risk": true,
+      "controls": [
+        "CD-03",
+        "CD-06"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.country_of_birth",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "pattern": "^[A-Z]{2}$",
+      "pii": true,
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents",
+      "entity": "person",
+      "type": "array",
+      "required": false,
+      "controls": [
+        "CD-04"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents[].type",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "enum": [
+        "drivers_license",
+        "state_id",
+        "passport",
+        "military_id",
+        "tribal_id",
+        "permanent_resident_card"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents[].number",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "pii": true,
+      "pii_classification": "restricted",
+      "encryption": "field-level",
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents[].issuing_country",
+      "entity": "person",
+      "type": "string",
+      "required": true,
+      "pattern": "^[A-Z]{2}$",
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents[].issuing_state",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "category": "person"
+    },
+    {
+      "path": "person.id_documents[].expiration_date",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "format": "date",
+      "category": "person"
+    },
+    {
+      "path": "person.kyc_status",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "pending",
+        "in_progress",
+        "approved",
+        "denied",
+        "review"
+      ],
+      "readOnly": true,
+      "category": "person"
+    },
+    {
+      "path": "person.risk_tier",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "standard",
+        "elevated",
+        "high"
+      ],
+      "readOnly": true,
+      "description": "Assigned by CD-03 at creation.",
+      "controls": [
+        "CD-03"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.risk_score",
+      "entity": "person",
+      "type": "number",
+      "required": false,
+      "readOnly": true,
+      "controls": [
+        "CD-03",
+        "BA-04"
+      ],
+      "computed": true,
+      "computed_derivation": "weighted_model(kyc_risk, geo_risk, txn_pattern_risk)",
+      "category": "person"
+    },
+    {
+      "path": "person.control_results",
+      "entity": "person",
+      "type": "array",
+      "required": false,
+      "readOnly": true,
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].control_id",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].control_name",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].role",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "gate",
+        "async",
+        "audit"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].result",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "pass",
+        "fail",
+        "warn",
+        "skip",
+        "pending"
+      ],
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].detail",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "category": "person"
+    },
+    {
+      "path": "person.control_results[].evaluated_at",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "category": "person"
+    },
+    {
+      "path": "person.created_at",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "person"
+    },
+    {
+      "path": "person.updated_at",
+      "entity": "person",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "person"
+    },
+    {
+      "path": "kyc_result.provider",
+      "entity": "kyc_result",
+      "type": "string",
+      "required": false,
+      "description": "KYC provider that produced this result",
+      "category": "kyc_result"
+    },
+    {
+      "path": "kyc_result.result",
+      "entity": "kyc_result",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "approved",
+        "denied",
+        "review"
+      ],
+      "category": "kyc_result"
+    },
+    {
+      "path": "kyc_result.risk_signals",
+      "entity": "kyc_result",
+      "type": "array",
+      "required": false,
+      "category": "kyc_result"
+    },
+    {
+      "path": "kyc_result.verified_at",
+      "entity": "kyc_result",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "category": "kyc_result"
+    },
+    {
+      "path": "change_context.changed_fields",
+      "entity": "change_context",
+      "type": "array",
+      "required": false,
+      "category": "change_context"
+    },
+    {
+      "path": "change_context.changed_by",
+      "entity": "change_context",
+      "type": "string",
+      "required": false,
+      "category": "change_context"
+    },
+    {
+      "path": "change_context.reason",
+      "entity": "change_context",
+      "type": "string",
+      "required": false,
+      "category": "change_context"
+    },
+    {
+      "path": "account.account_id",
+      "entity": "account",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "category": "account"
+    },
+    {
+      "path": "account.entity_id",
+      "entity": "account",
+      "type": "string",
+      "required": false,
+      "category": "account"
+    },
+    {
+      "path": "account.account_type",
+      "entity": "account",
+      "type": "string",
+      "required": false,
+      "category": "account"
+    },
+    {
+      "path": "account.status",
+      "entity": "account",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "open",
+        "frozen",
+        "closed"
+      ],
+      "readOnly": true,
+      "category": "account"
+    },
+    {
+      "path": "account.created_at",
+      "entity": "account",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "account"
+    },
+    {
+      "path": "transaction.transaction_id",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.account_id",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.entity_id",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.amount",
+      "entity": "transaction",
+      "type": "number",
+      "required": false,
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.direction",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.type",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "ach_credit",
+        "ach_debit",
+        "wire",
+        "book",
+        "card",
+        "fee",
+        "interest"
+      ],
+      "category": "transaction"
+    },
+    {
+      "path": "transaction.created_at",
+      "entity": "transaction",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "transaction"
+    },
+    {
+      "path": "ach_transfer.transfer_id",
+      "entity": "ach_transfer",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "category": "ach_transfer"
+    },
+    {
+      "path": "ach_transfer.amount",
+      "entity": "ach_transfer",
+      "type": "number",
+      "required": false,
+      "category": "ach_transfer"
+    },
+    {
+      "path": "ach_transfer.direction",
+      "entity": "ach_transfer",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "credit",
+        "debit"
+      ],
+      "category": "ach_transfer"
+    },
+    {
+      "path": "ach_transfer.status",
+      "entity": "ach_transfer",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "pending_approval",
+        "submitted",
+        "settled",
+        "returned",
+        "rejected"
+      ],
+      "readOnly": true,
+      "category": "ach_transfer"
+    },
+    {
+      "path": "ach_transfer.effective_date",
+      "entity": "ach_transfer",
+      "type": "string",
+      "required": false,
+      "format": "date",
+      "category": "ach_transfer"
+    },
+    {
+      "path": "ach_transfer.created_at",
+      "entity": "ach_transfer",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "ach_transfer"
+    },
+    {
+      "path": "screening_result.screening_type",
+      "entity": "screening_result",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "ofac",
+        "sanctions",
+        "adverse_media",
+        "pep"
+      ],
+      "category": "screening_result"
+    },
+    {
+      "path": "screening_result.match_status",
+      "entity": "screening_result",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "clear",
+        "potential_match",
+        "confirmed_match"
+      ],
+      "category": "screening_result"
+    },
+    {
+      "path": "screening_result.matched_list",
+      "entity": "screening_result",
+      "type": "string",
+      "required": false,
+      "category": "screening_result"
+    },
+    {
+      "path": "screening_result.match_score",
+      "entity": "screening_result",
+      "type": "number",
+      "required": false,
+      "category": "screening_result"
+    },
+    {
+      "path": "screening_result.reviewed_by",
+      "entity": "screening_result",
+      "type": "string",
+      "required": false,
+      "category": "screening_result"
+    },
+    {
+      "path": "screening_result.reviewed_at",
+      "entity": "screening_result",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "category": "screening_result"
+    },
+    {
+      "path": "cash_activity.aggregate_amount",
+      "entity": "cash_activity",
+      "type": "number",
+      "required": false,
+      "description": "Total cash for entity in calendar day",
+      "controls": [
+        "BA-07"
+      ],
+      "category": "cash_activity"
+    },
+    {
+      "path": "cash_activity.transaction_count",
+      "entity": "cash_activity",
+      "type": "integer",
+      "required": false,
+      "category": "cash_activity"
+    },
+    {
+      "path": "cash_activity.calendar_date",
+      "entity": "cash_activity",
+      "type": "string",
+      "required": false,
+      "format": "date",
+      "category": "cash_activity"
+    },
+    {
+      "path": "cash_activity.includes_structuring_pattern",
+      "entity": "cash_activity",
+      "type": "boolean",
+      "required": false,
+      "controls": [
+        "BA-06"
+      ],
+      "category": "cash_activity"
+    },
+    {
+      "path": "sar_case.case_id",
+      "entity": "sar_case",
+      "type": "string",
+      "required": false,
+      "category": "sar_case"
+    },
+    {
+      "path": "sar_case.narrative",
+      "entity": "sar_case",
+      "type": "string",
+      "required": false,
+      "controls": [
+        "BA-08"
+      ],
+      "category": "sar_case"
+    },
+    {
+      "path": "sar_case.subjects",
+      "entity": "sar_case",
+      "type": "array",
+      "required": false,
+      "controls": [
+        "BA-08"
+      ],
+      "category": "sar_case"
+    },
+    {
+      "path": "sar_case.amount_involved",
+      "entity": "sar_case",
+      "type": "number",
+      "required": false,
+      "controls": [
+        "BA-08"
+      ],
+      "category": "sar_case"
+    },
+    {
+      "path": "sar_case.suspicious_activity_type",
+      "entity": "sar_case",
+      "type": "string",
+      "required": false,
+      "category": "sar_case"
+    },
+    {
+      "path": "control_result.control_id",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "category": "control_result"
+    },
+    {
+      "path": "control_result.control_name",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "category": "control_result"
+    },
+    {
+      "path": "control_result.role",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "gate",
+        "async",
+        "audit"
+      ],
+      "category": "control_result"
+    },
+    {
+      "path": "control_result.result",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "pass",
+        "fail",
+        "warn",
+        "skip",
+        "pending"
+      ],
+      "category": "control_result"
+    },
+    {
+      "path": "control_result.detail",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "category": "control_result"
+    },
+    {
+      "path": "control_result.evaluated_at",
+      "entity": "control_result",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "category": "control_result"
+    },
+    {
+      "path": "campaign.campaign_id",
+      "entity": "campaign",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.ad_copy",
+      "entity": "campaign",
+      "type": "string",
+      "required": true,
+      "controls": [
+        "FL-07"
+      ],
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.media_geo",
+      "entity": "campaign",
+      "type": "object",
+      "required": false,
+      "fair_lending_risk": true,
+      "controls": [
+        "FL-07"
+      ],
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.media_geo.target_regions",
+      "entity": "campaign",
+      "type": "array",
+      "required": false,
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.media_geo.excluded_regions",
+      "entity": "campaign",
+      "type": "array",
+      "required": false,
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.channel",
+      "entity": "campaign",
+      "type": "string",
+      "required": true,
+      "enum": [
+        "email",
+        "social",
+        "display",
+        "print",
+        "radio",
+        "tv"
+      ],
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.submitted_by",
+      "entity": "campaign",
+      "type": "string",
+      "required": false,
+      "readOnly": true,
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.status",
+      "entity": "campaign",
+      "type": "string",
+      "required": false,
+      "enum": [
+        "draft",
+        "pending_review",
+        "approved",
+        "rejected"
+      ],
+      "readOnly": true,
+      "category": "campaign"
+    },
+    {
+      "path": "campaign.created_at",
+      "entity": "campaign",
+      "type": "string",
+      "required": false,
+      "format": "date-time",
+      "readOnly": true,
+      "category": "campaign"
+    }
+  ],
+  "events": [
+    {
+      "name": "member.created",
+      "description": "Fired when a new person or business entity is persisted in",
+      "carries": [
+        "person"
+      ],
+      "emitted_by": [
+        "POST /entities/person"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "member.kyc_completed",
+      "description": "Async KYC pipeline completed. Entity transitions from",
+      "carries": [
+        "person",
+        "kyc_result"
+      ],
+      "emitted_by": [
+        "(kyc pipeline)"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "kyc_result.provider",
+        "kyc_result.result",
+        "kyc_result.risk_signals",
+        "kyc_result.verified_at"
+      ]
+    },
+    {
+      "name": "member.kyc_failed",
+      "description": "KYC denied. Entity transitions to DISABLED.",
+      "carries": [
+        "person",
+        "kyc_result"
+      ],
+      "emitted_by": [
+        "(kyc pipeline)"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "kyc_result.provider",
+        "kyc_result.result",
+        "kyc_result.risk_signals",
+        "kyc_result.verified_at"
+      ]
+    },
+    {
+      "name": "member.updated",
+      "description": "Entity PII or profile data changed.",
+      "carries": [
+        "person",
+        "change_context"
+      ],
+      "emitted_by": [
+        "PATCH /entities/{entity_id}"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "change_context.changed_fields",
+        "change_context.changed_by",
+        "change_context.reason"
+      ]
+    },
+    {
+      "name": "member.disabled",
+      "description": "Entity moved to DISABLED state.",
+      "carries": [
+        "person"
+      ],
+      "emitted_by": [
+        "POST /entities/{entity_id}/disable"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "member.reinstated",
+      "description": "Entity moved from DISABLED back to ACTIVE.",
+      "carries": [
+        "person"
+      ],
+      "emitted_by": [
+        "POST /entities/{entity_id}/reinstate"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "account.opened",
+      "description": "Account reaches OPEN state.",
+      "carries": [
+        "account",
+        "person"
+      ],
+      "emitted_by": [
+        "POST /accounts"
+      ],
+      "available_fields": [
+        "account.account_id",
+        "account.entity_id",
+        "account.account_type",
+        "account.status",
+        "account.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "account.frozen",
+      "description": "Account frozen (compliance, fraud, legal, admin).",
+      "carries": [
+        "account",
+        "person"
+      ],
+      "emitted_by": [
+        "POST /accounts/{account_id}/freeze"
+      ],
+      "available_fields": [
+        "account.account_id",
+        "account.entity_id",
+        "account.account_type",
+        "account.status",
+        "account.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "account.closed",
+      "description": "Account closed.",
+      "carries": [
+        "account",
+        "person"
+      ],
+      "emitted_by": [
+        "POST /accounts/{account_id}/close"
+      ],
+      "available_fields": [
+        "account.account_id",
+        "account.entity_id",
+        "account.account_type",
+        "account.status",
+        "account.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "transaction.created",
+      "description": "Ledger entry created (any type).",
+      "carries": [
+        "transaction",
+        "account",
+        "person"
+      ],
+      "emitted_by": [
+        "POST /transfers/ach",
+        "POST /transfers/wire",
+        "POST /transfers/book"
+      ],
+      "available_fields": [
+        "transaction.transaction_id",
+        "transaction.account_id",
+        "transaction.entity_id",
+        "transaction.amount",
+        "transaction.direction",
+        "transaction.type",
+        "transaction.created_at",
+        "account.account_id",
+        "account.entity_id",
+        "account.account_type",
+        "account.status",
+        "account.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "ach.submitted",
+      "description": "ACH file submitted to Fed.",
+      "carries": [
+        "ach_transfer",
+        "person"
+      ],
+      "emitted_by": [
+        "(payment hub)"
+      ],
+      "available_fields": [
+        "ach_transfer.transfer_id",
+        "ach_transfer.amount",
+        "ach_transfer.direction",
+        "ach_transfer.status",
+        "ach_transfer.effective_date",
+        "ach_transfer.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "ach.returned",
+      "description": "ACH return received.",
+      "carries": [
+        "ach_transfer",
+        "person"
+      ],
+      "emitted_by": [
+        "(payment hub)"
+      ],
+      "available_fields": [
+        "ach_transfer.transfer_id",
+        "ach_transfer.amount",
+        "ach_transfer.direction",
+        "ach_transfer.status",
+        "ach_transfer.effective_date",
+        "ach_transfer.created_at",
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at"
+      ]
+    },
+    {
+      "name": "screening.completed",
+      "description": "OFAC/sanctions/adverse media screening finished.",
+      "carries": [
+        "person",
+        "screening_result"
+      ],
+      "emitted_by": [
+        "(screening pipeline)"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "screening_result.screening_type",
+        "screening_result.match_status",
+        "screening_result.matched_list",
+        "screening_result.match_score",
+        "screening_result.reviewed_by",
+        "screening_result.reviewed_at"
+      ]
+    },
+    {
+      "name": "ctr.threshold_reached",
+      "description": "Cash transactions exceed $10k aggregate for entity in calendar day.",
+      "carries": [
+        "person",
+        "cash_activity"
+      ],
+      "emitted_by": [
+        "(monitoring engine)"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "cash_activity.aggregate_amount",
+        "cash_activity.transaction_count",
+        "cash_activity.calendar_date",
+        "cash_activity.includes_structuring_pattern"
+      ]
+    },
+    {
+      "name": "sar.decision_required",
+      "description": "Case requires SAR filing decision.",
+      "carries": [
+        "person",
+        "sar_case"
+      ],
+      "emitted_by": [
+        "(case management)"
+      ],
+      "available_fields": [
+        "person.entity_id",
+        "person.type",
+        "person.status",
+        "person.name_first",
+        "person.name_last",
+        "person.name_middle",
+        "person.name_suffix",
+        "person.date_of_birth",
+        "person.tax_id",
+        "person.tax_id_last_four",
+        "person.address",
+        "person.address.line1",
+        "person.address.line2",
+        "person.address.city",
+        "person.address.state",
+        "person.address.postal_code",
+        "person.address.country",
+        "person.phone",
+        "person.email",
+        "person.purpose_of_account",
+        "person.source_of_funds",
+        "person.expected_activity",
+        "person.expected_activity.monthly_volume",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.primary_transaction_types",
+        "person.expected_activity.international_activity",
+        "person.occupation",
+        "person.employer_name",
+        "person.country_of_citizenship",
+        "person.country_of_birth",
+        "person.id_documents",
+        "person.id_documents[].type",
+        "person.id_documents[].number",
+        "person.id_documents[].issuing_country",
+        "person.id_documents[].issuing_state",
+        "person.id_documents[].expiration_date",
+        "person.kyc_status",
+        "person.risk_tier",
+        "person.risk_score",
+        "person.control_results",
+        "person.control_results[].control_id",
+        "person.control_results[].control_name",
+        "person.control_results[].role",
+        "person.control_results[].result",
+        "person.control_results[].detail",
+        "person.control_results[].evaluated_at",
+        "person.created_at",
+        "person.updated_at",
+        "sar_case.case_id",
+        "sar_case.narrative",
+        "sar_case.subjects",
+        "sar_case.amount_involved",
+        "sar_case.suspicious_activity_type"
+      ]
+    },
+    {
+      "name": "control.triggered",
+      "description": "Meta-event — a control was evaluated.",
+      "carries": [
+        "control_result"
+      ],
+      "emitted_by": [
+        "(control engine)"
+      ],
+      "available_fields": [
+        "control_result.control_id",
+        "control_result.control_name",
+        "control_result.role",
+        "control_result.result",
+        "control_result.detail",
+        "control_result.evaluated_at"
+      ]
+    },
+    {
+      "name": "campaign.created",
+      "description": "Marketing campaign submitted for compliance review.",
+      "carries": [
+        "campaign"
+      ],
+      "emitted_by": [
+        "POST /campaigns"
+      ],
+      "available_fields": [
+        "campaign.campaign_id",
+        "campaign.ad_copy",
+        "campaign.media_geo",
+        "campaign.media_geo.target_regions",
+        "campaign.media_geo.excluded_regions",
+        "campaign.channel",
+        "campaign.submitted_by",
+        "campaign.status",
+        "campaign.created_at"
+      ]
+    }
+  ],
+  "endpoints": [
+    {
+      "path": "/entities/person",
+      "method": "POST",
+      "operation_id": "createPerson",
+      "summary": "Create a person entity (individual member)",
+      "tags": [
+        "Entities"
+      ],
+      "controls": [
+        {
+          "id": "BA-03",
+          "role": "gate",
+          "name": "CIP"
+        },
+        {
+          "id": "BA-04",
+          "role": "gate",
+          "name": "CDD / EDD"
+        },
+        {
+          "id": "CD-03",
+          "role": "gate",
+          "name": "Member Risk Profiling"
+        },
+        {
+          "id": "BA-05",
+          "role": "async",
+          "name": "OFAC Screening"
+        },
+        {
+          "id": "BA-20",
+          "role": "async",
+          "name": "PEP Screening & EDD"
+        },
+        {
+          "id": "CD-04",
+          "role": "async",
+          "name": "CIP & Identity Verification"
+        },
+        {
+          "id": "CD-06",
+          "role": "async",
+          "name": "Sanctions & Adverse Media Screening"
+        },
+        {
+          "id": "CD-12",
+          "role": "audit",
+          "name": "Recordkeeping & Retention"
+        }
+      ],
+      "emits": [
+        "member.created",
+        "control.triggered"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "id": "BA-03",
+      "name": "CIP",
+      "role": "gate",
+      "bound_fields": [
+        "person.address",
+        "person.address.postal_code",
+        "person.date_of_birth",
+        "person.name_first",
+        "person.name_last",
+        "person.tax_id"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "BA-04",
+      "name": "CDD / EDD",
+      "role": "gate",
+      "bound_fields": [
+        "person.expected_activity",
+        "person.expected_activity.international_activity",
+        "person.expected_activity.monthly_volume",
+        "person.purpose_of_account",
+        "person.risk_score",
+        "person.source_of_funds"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "CD-03",
+      "name": "Member Risk Profiling",
+      "role": "gate",
+      "bound_fields": [
+        "person.address.country",
+        "person.country_of_citizenship",
+        "person.expected_activity",
+        "person.expected_activity.international_activity",
+        "person.expected_activity.monthly_count",
+        "person.expected_activity.monthly_volume",
+        "person.occupation",
+        "person.purpose_of_account",
+        "person.risk_score",
+        "person.risk_tier",
+        "person.source_of_funds"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "BA-05",
+      "name": "OFAC Screening",
+      "role": "async",
+      "bound_fields": [
+        "person.address.country",
+        "person.date_of_birth",
+        "person.name_first",
+        "person.name_last"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "BA-20",
+      "name": "PEP Screening & EDD",
+      "role": "async",
+      "bound_fields": [
+        "person.date_of_birth",
+        "person.name_first",
+        "person.name_last",
+        "person.occupation"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "CD-04",
+      "name": "CIP & Identity Verification",
+      "role": "async",
+      "bound_fields": [
+        "person.address",
+        "person.date_of_birth",
+        "person.id_documents",
+        "person.name_first",
+        "person.name_last",
+        "person.tax_id"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "CD-06",
+      "name": "Sanctions & Adverse Media Screening",
+      "role": "async",
+      "bound_fields": [
+        "person.country_of_citizenship",
+        "person.name_first",
+        "person.name_last"
+      ],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": [
+        "account.closed",
+        "account.frozen",
+        "account.opened",
+        "ach.returned",
+        "ach.submitted",
+        "ctr.threshold_reached",
+        "member.created",
+        "member.disabled",
+        "member.kyc_completed",
+        "member.kyc_failed",
+        "member.reinstated",
+        "member.updated",
+        "sar.decision_required",
+        "screening.completed",
+        "transaction.created"
+      ]
+    },
+    {
+      "id": "CD-12",
+      "name": "Recordkeeping & Retention",
+      "role": "audit",
+      "bound_fields": [],
+      "bound_endpoints": [
+        "POST /entities/person"
+      ],
+      "triggered_by_events": [
+        "control.triggered",
+        "member.created"
+      ],
+      "events_carrying_fields": []
+    },
+    {
+      "id": "BA-07",
+      "name": null,
+      "role": null,
+      "bound_fields": [
+        "cash_activity.aggregate_amount"
+      ],
+      "bound_endpoints": [],
+      "triggered_by_events": [],
+      "events_carrying_fields": [
+        "ctr.threshold_reached"
+      ]
+    },
+    {
+      "id": "BA-06",
+      "name": null,
+      "role": null,
+      "bound_fields": [
+        "cash_activity.includes_structuring_pattern"
+      ],
+      "bound_endpoints": [],
+      "triggered_by_events": [],
+      "events_carrying_fields": [
+        "ctr.threshold_reached"
+      ]
+    },
+    {
+      "id": "BA-08",
+      "name": null,
+      "role": null,
+      "bound_fields": [
+        "sar_case.amount_involved",
+        "sar_case.narrative",
+        "sar_case.subjects"
+      ],
+      "bound_endpoints": [],
+      "triggered_by_events": [],
+      "events_carrying_fields": [
+        "sar.decision_required"
+      ]
+    },
+    {
+      "id": "FL-07",
+      "name": null,
+      "role": null,
+      "bound_fields": [
+        "campaign.ad_copy",
+        "campaign.media_geo"
+      ],
+      "bound_endpoints": [],
+      "triggered_by_events": [],
+      "events_carrying_fields": [
+        "campaign.created"
+      ]
+    }
+  ]
+}

@@ -14,3 +14,13 @@ Computed/derived fields (non-standard, needs extension)
 This pushes you toward OpenAPI as the single source of truth for everything the control system can reference. That's a strong position — it means one artifact to maintain, one place lawyers look, one thing to diff.
 
 But it also means your spec is no longer "just" an API description. It's a control vocabulary specification that happens to also describe HTTP endpoints.
+
+Prototype checklist:
+[ ] Hosted on vercel
+[ ] Show control creation, changing an existing control and creating a new one from scratch
+[ ] Flesh out the life cycle of approval and deployment of changes to controls
+[ ] Hook up control builder to gitbook so that when a control is changed it publishes to gitbook (after approval)
+[ ] Automatically run parsing on each commit (Github action)
+[ ] Show a change in API spec leads to diff in vocabulary and flags affected controls
+[ ] Show automatic dashboard that is created for each policy (combination of controls)
+[ ] Show audit trail of the events

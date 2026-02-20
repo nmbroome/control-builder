@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, FileText, Edit3, Send, Upload, Download, RefreshCw } from 'lucide-react';
+import { Plus, FileText, Edit3, Send, Upload, Download, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { ControlEditor } from '@/components/ControlEditor';
 import { RequestModal } from '@/components/RequestModal';
-import { VOCABULARY } from '@/data/vocabulary';
+import { EMPTY_VOCABULARY, loadVocabulary } from '@/data/vocabulary';
+import { STATIC_VOCABULARY } from '@/data/static-vocabulary';
 import { buildVocabularyManifest } from '@/lib/vocabulary-export';
 
 function createEmptyControl() {
@@ -39,23 +40,56 @@ export function ControlBuilderApp() {
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState(null);
 
-  // Load controls from public/controls.json on startup
+  // Vocabulary is now loaded from vocabulary.json at runtime
+  const [vocabulary, setVocabulary] = useState(EMPTY_VOCABULARY);
+  const [vocabError, setVocabError] = useState(null);
+
+  // Load controls and vocabulary on startup
   useEffect(() => {
-    loadControls();
+    loadAll();
   }, []);
 
-  const loadControls = async () => {
+  const loadAll = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/controls.json');
-      const data = await response.json();
-      if (data.controls && Array.isArray(data.controls)) {
-        setControls(data.controls);
+      const [controlsResult, vocabResult] = await Promise.allSettled([
+        loadControls(),
+        loadVocab(),
+      ]);
+
+      if (controlsResult.status === 'rejected') {
+        console.error('Failed to load controls:', controlsResult.reason);
       }
-    } catch (err) {
-      console.error('Failed to load controls:', err);
+      if (vocabResult.status === 'rejected') {
+        console.error('Failed to load vocabulary:', vocabResult.reason);
+        setVocabError(vocabResult.reason.message);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadControls = async () => {
+    const response = await fetch('/controls.json');
+    const data = await response.json();
+    if (data.controls && Array.isArray(data.controls)) {
+      setControls(data.controls);
+    }
+  };
+
+  const loadVocab = async () => {
+    try {
+      const vocab = await loadVocabulary('/vocabulary.json', STATIC_VOCABULARY);
+      setVocabulary(vocab);
+      setVocabError(null);
+    } catch (err) {
+      // Vocabulary failed to load — UI still works, just no autocomplete
+      console.warn('Vocabulary not available, using empty vocabulary:', err.message);
+      setVocabError(err.message);
+      setVocabulary({
+        ...EMPTY_VOCABULARY,
+        ...STATIC_VOCABULARY,
+      });
     }
   };
 
@@ -99,7 +133,7 @@ export function ControlBuilderApp() {
   };
 
   const handleExportVocabularyYAML = () => {
-    const yamlContent = buildVocabularyManifest(controls, VOCABULARY);
+    const yamlContent = buildVocabularyManifest(controls, vocabulary);
     const blob = new Blob([yamlContent], { type: 'text/yaml' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -124,7 +158,7 @@ export function ControlBuilderApp() {
       <div className="h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-600 mb-2" />
-          <p className="text-gray-700">Loading controls...</p>
+          <p className="text-gray-700">Loading controls & vocabulary...</p>
         </div>
       </div>
     );
@@ -153,6 +187,18 @@ export function ControlBuilderApp() {
               Requests ({requests.length})
             </button>
           </div>
+
+          {/* Vocabulary status indicator */}
+          {vocabulary.meta?.spec_version ? (
+            <span className="text-xs text-gray-500 font-mono">
+              vocab v{vocabulary.meta.spec_version} · {vocabulary.stats?.total_fields || 0} fields · {vocabulary.stats?.total_events || 0} events
+            </span>
+          ) : vocabError ? (
+            <span className="text-xs text-amber-600 flex items-center gap-1">
+              <AlertTriangle size={12} /> Vocabulary not loaded
+            </span>
+          ) : null}
+
           {saveStatus && (
             <span className="text-sm text-green-600 font-medium">
               ✓ {saveStatus}
@@ -191,7 +237,7 @@ export function ControlBuilderApp() {
                 handleSaveControl(updated);
               }}
               onClose={() => setSelectedControl(null)}
-              vocabulary={VOCABULARY}
+              vocabulary={vocabulary}
               onRequestNew={(type) => setShowRequestModal(type)}
             />
           </div>
