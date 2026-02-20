@@ -16,7 +16,7 @@ This pushes you toward OpenAPI as the single source of truth for everything the 
 But it also means your spec is no longer "just" an API description. It's a control vocabulary specification that happens to also describe HTTP endpoints.
 
 Prototype checklist:
-[ ] Hosted on vercel
+[x] Hosted on vercel
 [ ] Show control creation, changing an existing control and creating a new one from scratch
 [ ] Flesh out the life cycle of approval and deployment of changes to controls
 [ ] Hook up control builder to gitbook so that when a control is changed it publishes to gitbook (after approval)
