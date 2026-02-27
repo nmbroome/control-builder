@@ -1,6 +1,6 @@
 ## Roadmap
-[ ] Minimum viable OpenAPI spec for Fair Lending
-[ ] Vocabulary parser that pulls the vocabulary from the openAPI spec, we care about the endpoints, the schemas, and the parameters
+[x] Minimum viable OpenAPI spec for Fair Lending
+[x] Vocabulary parser that pulls the vocabulary from the openAPI spec, we care about the endpoints, the schemas, and the parameters
 [ ] Automate generation of specification from the actual API, 
 [ ] Schema binding: How do controls stay coupled to your OpenAPI spec so changes propagate?
 [ ] Wrapper to enforce annotations
