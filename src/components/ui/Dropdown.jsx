@@ -46,6 +46,7 @@ export function Dropdown({
         const found = items.find((i) => i.id === value);
         if (found) return found;
       }
+      return null;
     }
 
     return typeof options[0] === 'string'

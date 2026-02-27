@@ -1,4 +1,5 @@
 ## Roadmap
+[ ] Minimum viable OpenAPI spec for Fair Lending
 [ ] Vocabulary parser that pulls the vocabulary from the openAPI spec, we care about the endpoints, the schemas, and the parameters
 [ ] Automate generation of specification from the actual API, 
 [ ] Schema binding: How do controls stay coupled to your OpenAPI spec so changes propagate?
@@ -18,9 +19,10 @@ But it also means your spec is no longer "just" an API description. It's a contr
 Prototype checklist:
 [x] Hosted on vercel
 [ ] Show control creation, changing an existing control and creating a new one from scratch
-[ ] Flesh out the life cycle of approval and deployment of changes to controls
 [ ] Hook up control builder to gitbook so that when a control is changed it publishes to gitbook (after approval)
 [ ] Automatically run parsing on each commit (Github action)
 [ ] Show a change in API spec leads to diff in vocabulary and flags affected controls
 [ ] Show automatic dashboard that is created for each policy (combination of controls)
 [ ] Show audit trail of the events
+
+[ ] Flesh out the life cycle of approval and deployment of changes to controls
