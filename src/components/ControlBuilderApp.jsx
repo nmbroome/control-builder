@@ -9,6 +9,7 @@ import { RequestModal } from '@/components/RequestModal';
 import { EMPTY_VOCABULARY, loadVocabulary } from '@/data/vocabulary';
 import { STATIC_VOCABULARY } from '@/data/static-vocabulary';
 import { buildVocabularyManifest } from '@/lib/vocabulary-export';
+import { normalizeControls } from '@/lib/control-normalizer';
 
 function createEmptyControl() {
   return {
@@ -73,9 +74,7 @@ export function ControlBuilderApp() {
   const loadControls = async () => {
     const response = await fetch('/controls.json');
     const data = await response.json();
-    if (data.controls && Array.isArray(data.controls)) {
-      setControls(data.controls);
-    }
+    setControls(normalizeControls(data));
   };
 
   const loadVocab = async () => {
@@ -140,8 +139,9 @@ export function ControlBuilderApp() {
       try {
         const text = await file.text();
         const data = JSON.parse(text);
-        if (data.controls && Array.isArray(data.controls)) {
-          setControls(data.controls);
+        const normalized = normalizeControls(data);
+        if (normalized.length > 0) {
+          setControls(normalized);
           setSaveStatus('imported');
           setTimeout(() => setSaveStatus(null), 2000);
         }
@@ -204,7 +204,7 @@ export function ControlBuilderApp() {
           {/* Vocabulary status indicator */}
           {vocabulary.meta?.spec_version ? (
             <span className="text-xs text-gray-500 font-mono">
-              vocab v{vocabulary.meta.spec_version} · {vocabulary.stats?.total_fields || 0} fields · {vocabulary.stats?.total_events || 0} events
+              vocab v{vocabulary.meta.spec_version} · {vocabulary.stats?.fields || vocabulary.stats?.total_fields || 0} fields · {vocabulary.stats?.events || vocabulary.stats?.total_events || 0} events
             </span>
           ) : vocabError ? (
             <span className="text-xs text-amber-600 flex items-center gap-1">

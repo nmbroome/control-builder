@@ -46,12 +46,13 @@ export function Dropdown({
         const found = items.find((i) => i.id === value);
         if (found) return found;
       }
-      return null;
+      // Value not in vocabulary — show raw value instead of placeholder
+      return value;
     }
 
     return typeof options[0] === 'string'
       ? value
-      : options.find((o) => o.id === value);
+      : options.find((o) => o.id === value) || value;
   }, [value, options, grouped]);
 
   return (
