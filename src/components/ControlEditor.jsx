@@ -12,6 +12,9 @@ import {
 } from 'lucide-react';
 import { Badge, Section, Dropdown } from '@/components/ui';
 import { buildControlPreview } from '@/lib/vocabulary-export';
+import { validateControl } from '@/lib/control-validation';
+import { RulePreview } from '@/components/RulePreview';
+import { BehaviorEditor } from '@/components/BehaviorEditor';
 
 export function ControlEditor({
   control,
@@ -70,15 +73,7 @@ export function ControlEditor({
     return buildControlPreview(control, vocabulary);
   }, [control, vocabulary]);
 
-  const validation = useMemo(() => {
-    const errors = [];
-    if (!control.id) errors.push('Control ID is required');
-    if (!control.name) errors.push('Control name is required');
-    if (!control.triggers?.length) errors.push('At least one trigger is required');
-    if (!control.why_reg_cite) errors.push('Regulatory citation is required');
-    if (!control.system_behavior) errors.push('System behavior is required');
-    return { errors, valid: errors.length === 0 };
-  }, [control]);
+  const validation = useMemo(() => validateControl(control), [control]);
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -148,6 +143,8 @@ export function ControlEditor({
                 ))}
               </div>
             )}
+
+            <RulePreview control={control} vocabulary={vocabulary} />
 
             {/* Identity Section */}
             <Section title="Identity">
@@ -276,6 +273,7 @@ export function ControlEditor({
               <div className="space-y-2">
                 {(control.triggers || []).map((trigger, i) => (
                   <div key={i} className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide shrink-0">When</span>
                     <div className="flex-1">
                       <Dropdown
                         value={trigger}
@@ -286,6 +284,7 @@ export function ControlEditor({
                         onRequestNew={() => onRequestNew('event')}
                       />
                     </div>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide shrink-0">fires</span>
                     <button
                       onClick={() => removeFromArray('triggers', i)}
                       className="p-2 text-gray-600 hover:text-red-500"
@@ -305,11 +304,9 @@ export function ControlEditor({
 
             {/* System Behavior Section */}
             <Section title="System Behavior">
-              <textarea
-                placeholder="Describe what the system must do when triggered..."
+              <BehaviorEditor
                 value={control.system_behavior || ''}
-                onChange={(e) => updateControl('system_behavior', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg h-24 text-sm"
+                onChange={(val) => updateControl('system_behavior', val)}
               />
             </Section>
 

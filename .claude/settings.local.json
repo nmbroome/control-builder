@@ -12,7 +12,13 @@
       "Bash(npx vitest run src/components/ui/Dropdown.test.jsx)",
       "Bash(npx vitest run src/components/RequestModal.test.jsx)",
       "Bash(npx vitest run src/components/ControlEditor.test.jsx)",
-      "Bash(npx vitest run src/components/ControlBuilderApp.test.jsx)"
+      "Bash(npx vitest run src/components/ControlBuilderApp.test.jsx)",
+      "WebFetch(domain:docs.stripe.com)",
+      "WebFetch(domain:stripe.com)",
+      "Bash(npx vitest run src/lib/control-validation.test.js src/components/ControlEditor.test.jsx)",
+      "Bash(npx vitest run src/components/ControlList.test.jsx)",
+      "Bash(npx vitest run src/components/RulePreview.test.jsx src/components/BehaviorEditor.test.jsx)",
+      "Bash(npx vitest run src/components/BehaviorEditor.test.jsx)"
     ]
   }
 }

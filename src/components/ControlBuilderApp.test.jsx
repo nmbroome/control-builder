@@ -118,10 +118,11 @@ describe('ControlBuilderApp', () => {
     render(<ControlBuilderApp />);
 
     await waitFor(() => {
-      expect(screen.getByText('bsa-aml.md')).toBeInTheDocument();
+      // Source file appears as both a filter pill and a section header
+      expect(screen.getAllByText('bsa-aml.md').length).toBeGreaterThanOrEqual(1);
     });
 
-    expect(screen.getByText('fair-lending.md')).toBeInTheDocument();
+    expect(screen.getAllByText('fair-lending.md').length).toBeGreaterThanOrEqual(1);
   });
 
   it('shows control count in header', async () => {
