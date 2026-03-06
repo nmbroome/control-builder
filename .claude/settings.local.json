@@ -5,7 +5,14 @@
       "Bash(npm install:*)",
       "Bash(node -e:*)",
       "Bash(npm run build:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(wc -l /Users/noah/github/controls-builder/compliance-system/*.yaml)",
+      "Bash(npx vitest run)",
+      "Bash(npx vitest run src/components/ui/Badge.test.jsx src/components/ui/Section.test.jsx)",
+      "Bash(npx vitest run src/components/ui/Dropdown.test.jsx)",
+      "Bash(npx vitest run src/components/RequestModal.test.jsx)",
+      "Bash(npx vitest run src/components/ControlEditor.test.jsx)",
+      "Bash(npx vitest run src/components/ControlBuilderApp.test.jsx)"
     ]
   }
 }
